@@ -1,51 +1,109 @@
 const http = require("node:http");
 const path = require("node:path");
-const fs = require("node:fs");
+const fs = require("node:fs/promises");
 
 const shoppingListFile = path.join(__dirname, "data.json");
+const successHeaders = { "Content-Type": "application/json" };
 
-function readShoppingListFile() {
-  fs.readFile(shoppingListFile, "utf8", (error, data) => {
-    if (error) {
-      console.log(error);
-    } else {
-      const shoppingListData = data;
-      return JSON.parse(shoppingListData);
-    }
-  });
-  //   console.log(data);
+async function readShoppingListFile() {
+  try {
+    const data = await fs.readFile(shoppingListFile, "utf8");
+    return JSON.parse(data);
+  } catch (error) {
+    console.error("Error reading file:", error);
+    return [];
+  }
 }
 
-function writeShoppingListFile(data) {
-  fs.writeFileSync(shoppingListFile, JSON.stringify(data, null, 2), {flag: "a"}, "utf8", ()=>{
-    if(error){
-        console.log(error)
-    } else {
-        console.log("new shopping item added")
-    }
-  });
+async function writeShoppingListFile(data) {
+  try {
+    await fs.writeFile(shoppingListFile, JSON.stringify(data, null, 2), "utf8");
+    console.log("Shopping list updated");
+  } catch (error) {
+    console.error("Error writing to file:", error);
+  }
 }
 
-// console.log(readShoppingListFile);
+function validateShoppingItem(item) {
+  return item && item.itemName && item.category && item.quantity;
+}
 
-// const server = http.createServer((req, res) => {
-//   const successHeaders = { "Content-Type": "text/plain" };
+const server = http.createServer(async (req, res) => {
+    
+  if (req.url === "/" && req.method === "GET") {
+    const shoppingList = await readShoppingListFile();
+    res.writeHead(200, successHeaders);
+    res.end(JSON.stringify(shoppingList));
+  } else if (req.url === "/add" && req.method === "POST") {
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+    });
+    req.on("end", async () => {
+      const newItem = JSON.parse(body);
+      if (!validateShoppingItem(newItem)) {
+        res.writeHead(404, successHeaders);
+        res.end(JSON.stringify({ error: "Invalid item data" }));
+        return;
+      }
 
-//   if (req.method === "GET") {
-//     switch (req.url) {
-//       case "/":
-//         res.writeHead(200, successHeaders);
-//         return res.end("current shopping items");
-//       case "/add":
-//         res.writeHead(200, successHeaders);
-//         return res.end("add shopping item");
-//       default:
-//         res.writeHead(404, successHeaders);
-//         return res.end("Error 404: Page not found");
-//     }
-//   }
-// });
+      const shoppingList = await readShoppingListFile();
+      newItem.id = Date.now();
+      shoppingList.push(newItem);
+      await writeShoppingListFile(shoppingList);
 
-// server.listen(5000, () => {
-//   console.log("server running on port 5000");
-// });
+      res.writeHead(200, successHeaders);
+      res.end(JSON.stringify(newItem));
+    });
+  } else if (req.url.startsWith("/updating/") && req.method === "PUT") {
+    const id = url.split("/")[2];
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+    });
+    req.on("end", async () => {
+      const updatedItem = JSON.parse(body);
+      if (!validateShoppingItem(updatedItem)) {
+        res.writeHead(404, successHeaders);
+        res.end(JSON.stringify({ error: "Invalid item data" }));
+        return;
+      }
+
+      const shoppingList = await readShoppingListFile();
+      const itemIndex = shoppingList.findIndex((item) => item.id == id);
+
+      if (itemIndex === -1) {
+        res.writeHead(404, successHeaders);
+        res.end(JSON.stringify({ error: "Item not found" }));
+        return;
+      }
+
+      shoppingList[itemIndex] = { ...shoppingList[itemIndex], ...updatedItem };
+      await writeShoppingListFile(shoppingList);
+
+      res.writeHead(200, successHeaders);
+      res.end(JSON.stringify(shoppingList[itemIndex]));
+    });
+  } else if (url.startsWith("/deleting/") && method === "DELETE") {
+    const id = url.split("/")[2];
+    const shoppingList = await readShoppingListFile();
+    const updatedList = shoppingList.filter((item) => item.id != id);
+
+    if (shoppingList.length === updatedList.length) {
+      res.writeHead(404, successHeaders);
+      res.end(JSON.stringify({ error: "Item not found" }));
+      return;
+    }
+
+    await writeShoppingListFile(updatedList);
+    res.writeHead(200, successHeaders);
+    res.end(JSON.stringify({ message: "Item deleted" }));
+  } else {
+    res.writeHead(404, successHeaders);
+    res.end(JSON.stringify({ error: "Route not found" }));
+  }
+});
+
+server.listen(5000, () => {
+  console.log("Server running on port 5000");
+});
