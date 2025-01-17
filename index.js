@@ -56,7 +56,7 @@ const server = http.createServer(async (req, res) => {
       res.end(JSON.stringify(newItem));
     });
   } else if (req.url.startsWith("/updating/") && req.method === "PUT") {
-    const id = url.split("/")[2];
+    const id = req.url.split("/")[2];
     let body = "";
     req.on("data", (chunk) => {
       body += chunk;
@@ -84,8 +84,8 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, successHeaders);
       res.end(JSON.stringify(shoppingList[itemIndex]));
     });
-  } else if (url.startsWith("/deleting/") && method === "DELETE") {
-    const id = url.split("/")[2];
+  } else if (req.url.startsWith("/deleting/") && req.method === "DELETE") {
+    const id = req.url.split("/")[2];
     const shoppingList = await readShoppingListFile();
     const updatedList = shoppingList.filter((item) => item.id != id);
 
