@@ -38,3 +38,40 @@ cd projectname
 npm install
 
 # node index.js
+```
+
+## Endpoints
+
+1. Post method:
+```
+    http://localhost:5000/add
+```
+
+   Request body:
+```
+  {
+    "itemName": "kota",
+    "category": "others",
+    "quantity": "2"
+  }
+```
+
+  This will add an item to the shopping list
+
+2. Get method: 
+```
+http://localhost:5000/
+```
+  This will get all the items in the shopping list
+
+3. Put method:
+```
+http://localhost:5000/updating/:id
+```
+This will edit the item of the given id
+
+4. Delete method:
+  ```
+http://localhost:5000//deletinging/:id
+```
+This will delete the item of the given id
